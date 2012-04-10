@@ -8,7 +8,7 @@ from twisted.trial import unittest, runner
 from selenium import webdriver
 from selenium.webdriver.remote import webelement
 
-from feat.common import decorator, log, error, reflect
+from feat.common import decorator, log, error, reflect, defer, time
 
 
 class LogWrapper(log.Logger):
@@ -83,6 +83,13 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
                 'test_suite = SeleniumTestSuiteFactory(sys.modules[__name__])'
                 '\nto make this happen.')
         return unittest.TestCase.run(self, result)
+
+    @defer.inlineCallbacks
+    def wait_for(self, check, timeout, freq=0.5, kwargs=dict()):
+        try:
+            yield time.wait_for(self, check, timeout, freq, kwargs)
+        except RuntimeError as e:
+            raise unittest.FailTest(str(e))
 
 
 def SeleniumTestSuiteFactory(module):
