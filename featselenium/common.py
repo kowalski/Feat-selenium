@@ -91,6 +91,13 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         except RuntimeError as e:
             raise unittest.FailTest(str(e))
 
+    def wait_for_windows(self, num, timeout=5):
+
+        def check():
+            return len(self.browser.window_handles) == num
+
+        return self.wait_for(check, timeout)
+
 
 def SeleniumTestSuiteFactory(module):
 
