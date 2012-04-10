@@ -150,10 +150,15 @@ class SeleniumTestSuite(unittest.TestSuite):
                                                        suffix='screenshot')
                     test_instance.config = config
                     test_instance.run(result)
-                    test_instance.info(
-                        "Grabing screenshot before closing the browser")
-                    test_instance.browser.do_screenshot()
-                    test_instance.browser.close()
+
+                    b = test_instance.browser
+                    for handle in b.window_handles:
+                        b.switch_to_window(handle)
+                        test_instance.info(
+                            "Grabing screenshot before closing the window "
+                            "title: %s", b.title)
+                        b.do_screenshot()
+                        b.close()
                     del(test_instance.browser)
                     del(test_instance.test_suite)
                     del(test_instance.config)
