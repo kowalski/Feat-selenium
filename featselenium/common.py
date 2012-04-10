@@ -1,6 +1,7 @@
 import ConfigParser
 import os
 import sys
+import types
 
 from twisted.trial import unittest, runner
 
@@ -30,6 +31,11 @@ class LogWrapper(log.Logger):
         # forward all other access to the browser object
         # decorate the methods to add logging
         unwrapped = getattr(self._delegate, name)
+        if not isinstance(unwrapped, types.MethodType):
+            self.logex(5, "%s getattr %s, result: %r:",
+                       (self.name, name, unwrapped),
+                       depth=-2)
+            return unwrapped
 
         def wrapped(*args, **kwargs):
             noncritical = kwargs.pop('noncritical', False)
