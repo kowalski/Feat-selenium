@@ -1,9 +1,8 @@
 import ConfigParser
 import os
-import sys
 import types
 
-from twisted.trial import unittest, runner
+from twisted.trial import unittest
 
 from selenium import webdriver
 from selenium.webdriver.remote import webelement
@@ -76,18 +75,47 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         unittest.TestCase.__init__(self, methodName)
 
     def run(self, result):
-        if (not hasattr(self, 'test_suite') or
-            not isinstance(self.test_suite, SeleniumTestSuite)):
-            self.skip = (
-                'Selenium tests should be run with SeleniumTestSuite.'
-                '\nAdd the line:\n  '
-                'test_suite = SeleniumTestSuiteFactory(sys.modules[__name__])'
-                '\nto make this happen.\n\n'
-                'Alternatively the problem might be that you are trying to '
-                'run a test case by a canonical name of the method/class. '
-                'Unfortunately trial has a bug preventing the correct '
-                'test_case from being used.')
-        return unittest.TestCase.run(self, result)
+        ini_path = os.environ.get("SELENIUM_INI", '')
+        skip_all = None
+        if ini_path != 'ignore' and not os.path.exists(ini_path):
+            ini_path = os.path.abspath(ini_path)
+            skip_all = (
+                "Configuration file not found! You should set the "
+                "SELENIUM_INI environment variable. If you really don't "
+                "want to use any config set this varialbe to 'ignore'. "
+                "The setting at the moment is: %r" % (ini_path, ))
+            config = None
+        else:
+            config = Config(ini_path)
+
+            canonical_name = '.'.join([reflect.canonical_name(self),
+                                       self._testMethodName])
+            os.mkdir(canonical_name)
+            os.chdir(os.path.join(os.path.curdir, canonical_name))
+            logfile = os.path.join(os.path.curdir, 'test.log')
+            log.FluLogKeeper.init(logfile)
+            log.FluLogKeeper.redirect_to(None, logfile)
+            log.FluLogKeeper.set_debug('5')
+
+            if skip_all:
+                result.addSkip(self, skip_all)
+            else:
+                self.browser = TestDriver(self, suffix='screenshot')
+                self.config = config
+                unittest.TestCase.run(self, result)
+
+                b = self.browser
+                for handle in b.window_handles:
+                    b.switch_to_window(handle)
+                    self.info(
+                        "Grabing screenshot before closing the window "
+                        "title: %s", b.title)
+                    b.do_screenshot()
+                b.quit()
+                del(self.browser)
+                del(self.config)
+
+        return result
 
     @defer.inlineCallbacks
     def wait_for(self, check, timeout, freq=0.5, kwargs=dict()):
@@ -104,18 +132,6 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         return self.wait_for(check, timeout)
 
 
-def SeleniumTestSuiteFactory(module):
-
-    def test_suite():
-        suite = SeleniumTestSuite()
-        loader = runner.TestLoader()
-        for klass in loader.findTestClasses(module):
-            suite.addTest(loader.loadClass(klass))
-        return suite
-
-    return test_suite
-
-
 class Config(object):
 
     def __init__(self, filepath):
@@ -124,61 +140,6 @@ class Config(object):
 
     def get(self, section, key):
         return self._cfg.get(section, key)
-
-
-class SeleniumTestSuite(unittest.TestSuite):
-
-    def run(self, result):
-        ini_path = os.environ.get("SELENIUM_INI", '')
-        skip_all = None
-        if ini_path != 'ignore' and not os.path.exists(ini_path):
-            ini_path = os.path.abspath(ini_path)
-            skip_all = (
-                "Configuration file not found! You should set the "
-                "SELENIUM_INI environment variable. If you really don't "
-                "want to use any config set this varialbe to 'ignore'. "
-                "The setting at the moment is: %r" % (ini_path, ))
-            config = None
-        else:
-            config = Config(ini_path)
-
-        for test in self._tests:
-            for test_instance in test._tests:
-                canonical_name = '.'.join([
-                    reflect.canonical_name(test_instance),
-                    test_instance._testMethodName])
-                os.mkdir(canonical_name)
-                os.chdir(os.path.join(os.path.curdir, canonical_name))
-                logfile = os.path.join(os.path.curdir, 'test.log')
-                log.FluLogKeeper.init(logfile)
-                log.FluLogKeeper.redirect_to(None, logfile)
-                log.FluLogKeeper.set_debug('5')
-
-                if skip_all:
-                    result.addSkip(test_instance, skip_all)
-                else:
-                    test_instance.test_suite = self
-                    test_instance.browser = TestDriver(test_instance,
-                                                       suffix='screenshot')
-                    test_instance.config = config
-                    test_instance.run(result)
-
-                    b = test_instance.browser
-                    for handle in b.window_handles:
-                        b.switch_to_window(handle)
-                        test_instance.info(
-                            "Grabing screenshot before closing the window "
-                            "title: %s", b.title)
-                        b.do_screenshot()
-                    b.quit()
-                    del(test_instance.browser)
-                    del(test_instance.test_suite)
-                    del(test_instance.config)
-
-        return result
-
-
-test_suite = SeleniumTestSuiteFactory(sys.modules[__name__])
 
 
 class TestDriver(LogWrapper):
