@@ -185,8 +185,7 @@ class TestDriver(LogWrapper):
     wrap_types = (webelement.WebElement, )
 
     def __init__(self, logkeeper, suffix):
-        self._browser = webdriver.Remote(
-            desired_capabilities=webdriver.DesiredCapabilities.CHROME)
+        self._browser = webdriver.Chrome()
         LogWrapper.__init__(self, logkeeper, self._browser)
         self._suffix = suffix
         self._screenshot_counter = 0
