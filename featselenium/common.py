@@ -168,6 +168,7 @@ class TestDriver(LogWrapper):
     def input_field(browser, xpath, value, noncritical=False):
         elem = browser.find_element_by_xpath(xpath, noncritical=noncritical)
         if elem:
+            elem.clear()
             elem.send_keys(value)
 
     def click(browser, xpath, noncritical=False):
