@@ -165,7 +165,6 @@ class SeleniumTestSuite(unittest.TestSuite):
                             "Grabing screenshot before closing the window "
                             "title: %s", b.title)
                         b.do_screenshot()
-                        b.close()
                     b.quit()
                     del(test_instance.browser)
                     del(test_instance.test_suite)
