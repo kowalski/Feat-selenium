@@ -7,6 +7,7 @@ from twisted.trial import unittest, runner
 
 from selenium import webdriver
 from selenium.webdriver.remote import webelement
+from selenium.webdriver.common import alert
 
 from feat.common import decorator, log, error, reflect, defer, time
 
@@ -81,7 +82,11 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
                 'Selenium tests should be run with SeleniumTestSuite.'
                 '\nAdd the line:\n  '
                 'test_suite = SeleniumTestSuiteFactory(sys.modules[__name__])'
-                '\nto make this happen.')
+                '\nto make this happen.\n\n'
+                'Alternatively the problem might be that you are trying to '
+                'run a test case by a canonical name of the method/class. '
+                'Unfortunately trial has a bug preventing the correct '
+                'test_case from being used.')
         return unittest.TestCase.run(self, result)
 
     @defer.inlineCallbacks
@@ -183,7 +188,7 @@ class TestDriver(LogWrapper):
     '''
 
     log_category = 'browser'
-    wrap_types = (webelement.WebElement, )
+    wrap_types = (webelement.WebElement, alert.Alert)
 
     def __init__(self, logkeeper, suffix):
         self._browser = webdriver.Chrome()
