@@ -79,18 +79,19 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         skip_all = None
         if ini_path != 'ignore' and not os.path.exists(ini_path):
             ini_path = os.path.abspath(ini_path)
-            skip_all = (
+            skip = (
                 "Configuration file not found! You should set the "
                 "SELENIUM_INI environment variable. If you really don't "
                 "want to use any config set this varialbe to 'ignore'. "
                 "The setting at the moment is: %r" % (ini_path, ))
-            config = None
-        else:
-            config = Config(ini_path)
+            result.addSkip(self, skip)
 
-            canonical_name = '.'.join([reflect.canonical_name(self),
-                                       self._testMethodName])
-            os.mkdir(canonical_name)
+        config = Config(ini_path)
+        canonical_name = '.'.join([reflect.canonical_name(self),
+                                   self._testMethodName])
+        os.mkdir(canonical_name)
+        backupdir = os.path.abspath(os.path.curdir)
+        try:
             os.chdir(os.path.join(os.path.curdir, canonical_name))
             logfile = os.path.join(os.path.curdir, 'test.log')
             log.FluLogKeeper.init(logfile)
@@ -114,6 +115,8 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
                 b.quit()
                 del(self.browser)
                 del(self.config)
+        finally:
+            os.chdir(backupdir)
 
         return result
 
