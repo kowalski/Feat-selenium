@@ -166,9 +166,11 @@ class SeleniumTestSuite(unittest.TestSuite):
                             "title: %s", b.title)
                         b.do_screenshot()
                         b.close()
+                    b.quit()
                     del(test_instance.browser)
                     del(test_instance.test_suite)
                     del(test_instance.config)
+
         return result
 
 
