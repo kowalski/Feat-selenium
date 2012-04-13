@@ -5,10 +5,10 @@ Setup
 
 I use this repository as a submodule of the project in which I keep the selenium tests.
 
-Clone it like this:
+Clone it like this: ::
 
-git submodule add git@github.com:kowalski/Feat-selenium.git
-ln -s Feat-selenium/featselenium .
+  git submodule add git@github.com:kowalski/Feat-selenium.git
+  ln -s Feat-selenium/featselenium .
 
 To use it you also need feat (https://github.com/f3at/feat) in the PYTHONPATH.
 
