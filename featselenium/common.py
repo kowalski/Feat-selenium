@@ -134,6 +134,13 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
         return self.wait_for(check, timeout)
 
+    def wait_for_ajax(self, timeout=30):
+
+        def check():
+            return self.browser.get_active_ajax() == 0
+
+        return self.wait_for(check, timeout)
+
 
 class Config(object):
 
@@ -178,6 +185,15 @@ class TestDriver(LogWrapper):
 
     def on_error(self, _e):
         self.do_screenshot()
+
+    def get_active_ajax(browser):
+        browser.execute_script(
+            "$('body').append('<div id=\"js-result\"></div>');"
+            "$('#js-result').html($.active);")
+        el = browser.find_element_by_xpath('//div[@id="js-result"]')
+        res = el.text
+        browser.execute_script("$('div#js-result').remove()")
+        return int(res)
 
     ### private ###
 
