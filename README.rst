@@ -39,6 +39,22 @@ The config is just an .ini file which will be parsed with ConfigParser and avail
 (all the commands assume that you are in root of the repository)
 
 
+Browsers supported
+------------------
+
+I'm running my tests against the newest version of Chrome and old Firefox (3.6.8). Unfortunately the new versions of FF are just dying unexpectedly.. maybe they will fix it someday.
+
+The default is to run tests against Chrome. To overwide it set the following environemnt variable: ::
+
+  export SELENIUM_BROWSER=firefox
+
+To override the default binary used by the driver use the following variable: ::
+
+  export SELENIUM_FIREFOX=/path/to/custom/firefox
+
+In case you need to do something browser-specific in your test you can always check which browser is running by looking at *self.browser.browser* attribute which will be either 'Chrome' or 'Firefox'.
+
+
 Debugging
 ---------
 

@@ -7,6 +7,7 @@ from twisted.trial import unittest
 from selenium import webdriver
 from selenium.webdriver.remote import webelement
 from selenium.webdriver.common import alert
+from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 
 from feat.common import decorator, log, error, reflect, defer, time
 
@@ -162,7 +163,16 @@ class TestDriver(LogWrapper):
     wrap_types = (webelement.WebElement, alert.Alert)
 
     def __init__(self, logkeeper, suffix):
-        self._browser = webdriver.Chrome()
+        if os.environ.get('SELENIUM_BROWSER', '').upper() == 'FIREFOX':
+            binary = None
+            path = os.environ.get('SELENIUM_FIREFOX', '')
+            if path:
+                binary = FirefoxBinary(path)
+            self._browser = webdriver.Firefox(firefox_binary=binary)
+            self.browser = 'Firefox'
+        else:
+            self._browser = webdriver.Chrome()
+            self.browser = 'Chrome'
         LogWrapper.__init__(self, logkeeper, self._browser)
         self._suffix = suffix
         self._screenshot_counter = 0
