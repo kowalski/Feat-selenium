@@ -196,14 +196,17 @@ class TestDriver(LogWrapper):
     def on_error(self, _e):
         self.do_screenshot()
 
-    def get_active_ajax(browser):
+    def script_result(browser, script):
         browser.execute_script(
             "$('body').append('<div id=\"js-result\"></div>');"
-            "$('#js-result').html($.active);")
+            "$('#js-result').html(%s);" % (script, ))
         el = browser.find_element_by_xpath('//div[@id="js-result"]')
         res = el.text
         browser.execute_script("$('div#js-result').remove()")
-        return int(res)
+        return res
+
+    def get_active_ajax(browser):
+        return int(browser.script_result("$.active"))
 
     ### private ###
 
