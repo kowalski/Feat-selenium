@@ -8,6 +8,7 @@ from selenium import webdriver
 from selenium.webdriver.remote import webelement
 from selenium.webdriver.common import alert
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
+from selenium.common import exceptions
 
 from feat.common import decorator, log, error, reflect, defer, time
 
@@ -141,6 +142,21 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             return self.browser.get_active_ajax() == 0
 
         return self.wait_for(check, timeout)
+
+    @defer.inlineCallbacks
+    def wait_for_alert(self, timeout=10):
+
+        def check():
+            try:
+                alert = self.browser.switch_to_alert()
+                alert.text
+                return True
+            except exceptions.NoAlertPresentException:
+                return False
+
+        yield self.wait_for(check, timeout)
+
+        defer.returnValue(self.browser.switch_to_alert())
 
 
 class Config(object):
