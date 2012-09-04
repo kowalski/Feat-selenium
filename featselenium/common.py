@@ -1,5 +1,6 @@
 import ConfigParser
 import os
+import tidylib
 import types
 
 from twisted.trial import unittest
@@ -158,6 +159,16 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
         defer.returnValue(self.browser.switch_to_alert())
 
+    def validate_html(self):
+        source, document, errors = self.browser.validate_source()
+        if errors:
+            html_name = '%s.html' % (self.browser.title, )
+            with open(html_name, 'w') as f:
+                f.write(source)
+            self.fail("Failing because of invalid html. "
+                      "Saved output to %s\n"
+                      "Errors:\n%s" %(html_name, errors))
+
 
 class Config(object):
 
@@ -203,6 +214,11 @@ class TestDriver(LogWrapper):
         if elem:
             elem.clear()
             elem.send_keys(value)
+
+    def validate_source(browser):
+        source = browser.page_source
+        document, errors = tidylib.tidy_document(source)
+        return source, document, errors
 
     def click(browser, xpath, noncritical=False):
         elem = browser.find_element_by_xpath(xpath, noncritical=noncritical)
