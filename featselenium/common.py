@@ -1,9 +1,10 @@
 import ConfigParser
 import os
-import tidylib
 import types
 
 from twisted.trial import unittest
+
+from poster import encode
 
 from selenium import webdriver
 from selenium.webdriver.remote import webelement
@@ -12,6 +13,7 @@ from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.common import exceptions
 
 from feat.common import decorator, log, error, reflect, defer, time
+from feat.web import http, httpclient
 
 
 class LogWrapper(log.Logger):
@@ -159,15 +161,41 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
         defer.returnValue(self.browser.switch_to_alert())
 
+    @defer.inlineCallbacks
     def validate_html(self):
-        source, document, errors = self.browser.validate_source()
-        if errors:
+        source = self.browser.page_source
+        self._init_validator()
+
+        datagen, headers = encode.multipart_encode({
+            'fragment': source,
+            'charset': '(detect automatically)',
+            'group': 0,
+            'ss': 1,
+            'user-agent': 'W3C_Validator/1.3',
+            'doctype': 'inline'})
+
+        headers = dict((k.lower(), v) for k, v in headers.iteritems())
+        self.info("Validating html. Posting to %s/check",
+                  self._validator._host)
+        body = "".join(datagen)
+        response = yield self._validator.request(
+            http.Methods.POST, '/check', headers, body)
+        errors = response.headers.get('x-w3c-validator-errors')
+
+        if errors != '0':
             html_name = '%s.html' % (self.browser.title, )
             with open(html_name, 'w') as f:
-                f.write(source)
+                f.write(response.body)
             self.fail("Failing because of invalid html. "
-                      "Saved output to %s\n"
-                      "Errors:\n%s" %(html_name, errors))
+                      "Saved validator output to %s\n" %
+                      (html_name, ))
+
+    def _init_validator(self):
+        if hasattr(self, '_validator'):
+            return
+        self._validator = httpclient.Connection('validator.w3.org', 80,
+                                                logger=self)
+        self.addCleanup(self._validator.disconnect)
 
 
 class Config(object):
@@ -214,11 +242,6 @@ class TestDriver(LogWrapper):
         if elem:
             elem.clear()
             elem.send_keys(value)
-
-    def validate_source(browser):
-        source = browser.page_source
-        document, errors = tidylib.tidy_document(source)
-        return source, document, errors
 
     def click(browser, xpath, noncritical=False):
         elem = browser.find_element_by_xpath(xpath, noncritical=noncritical)
