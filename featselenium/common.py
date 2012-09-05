@@ -268,7 +268,7 @@ class TestDriver(LogWrapper):
         return res
 
     def get_active_ajax(browser):
-        return int(browser.script_result("$.active"))
+        return int(browser.execute_script("return $.active"))
 
     ### private ###
 
