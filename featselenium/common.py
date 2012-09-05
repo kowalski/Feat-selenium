@@ -163,8 +163,14 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
     @defer.inlineCallbacks
     def validate_html(self):
-        source = self.browser.page_source
         self._init_validator()
+
+        source = self.browser.page_source
+        # browser returns the result as ISO-8859-1 encoded, but it's later
+        # interpreted as unicode. Here I just remove all the nonascii
+        # characters from the input, I didn't find the better way to deal
+        # with this.
+        source = "".join(x for x in source if ord(x) < 128)
 
         datagen, headers = encode.multipart_encode({
             'fragment': source,
@@ -173,11 +179,13 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             'ss': 1,
             'user-agent': 'W3C_Validator/1.3',
             'doctype': 'inline'})
-
+        body = "".join(datagen)
+        # HttpConnection for some reason uses lowercase headers
         headers = dict((k.lower(), v) for k, v in headers.iteritems())
+
         self.info("Validating html. Posting to %s/check",
                   self._validator._host)
-        body = "".join(datagen)
+
         response = yield self._validator.request(
             http.Methods.POST, '/check', headers, body)
         errors = response.headers.get('x-w3c-validator-errors')
@@ -187,8 +195,7 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             with open(html_name, 'w') as f:
                 f.write(response.body)
             self.fail("Failing because of invalid html. "
-                      "Saved validator output to %s\n" %
-                      (html_name, ))
+                      "Saved validator output to %s\n" % (html_name, ))
 
     def _init_validator(self):
         if hasattr(self, '_validator'):
