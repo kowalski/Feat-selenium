@@ -163,7 +163,8 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
     @defer.inlineCallbacks
     def validate_html(self):
-        self._init_validator()
+        validator = httpclient.Connection('validator.w3.org', 80, logger=self)
+        self.addCleanup(validator.disconnect)
 
         source = self.browser.page_source
         # browser returns the result as ISO-8859-1 encoded, but it's later
@@ -183,11 +184,14 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         # HttpConnection for some reason uses lowercase headers
         headers = dict((k.lower(), v) for k, v in headers.iteritems())
 
-        self.info("Validating html. Posting to %s/check",
-                  self._validator._host)
+        self.info("Validating html. Posting to %s/check", validator._host)
 
-        response = yield self._validator.request(
-            http.Methods.POST, '/check', headers, body)
+        try:
+            response = yield validator.request(
+                http.Methods.POST, '/check', headers, body)
+        except Exception as e:
+            error.handle_exception(self, e, "Failed posting to validator")
+            self.fail("Failed posting to validator")
         errors = response.headers.get('x-w3c-validator-errors')
 
         if errors != '0':
@@ -196,13 +200,6 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
                 f.write(response.body)
             self.fail("Failing because of invalid html. "
                       "Saved validator output to %s\n" % (html_name, ))
-
-    def _init_validator(self):
-        if hasattr(self, '_validator'):
-            return
-        self._validator = httpclient.Connection('validator.w3.org', 80,
-                                                logger=self)
-        self.addCleanup(self._validator.disconnect)
 
 
 class Config(object):
