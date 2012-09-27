@@ -163,7 +163,13 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
     @defer.inlineCallbacks
     def validate_html(self):
-        validator = httpclient.Connection('validator.w3.org', 80, logger=self)
+        try:
+            if os.environ['SELENIUM_SKIP_HTML_VALIDATION']:
+                return
+        except KeyError:
+            pass
+        url = os.environ.get("SELENIUM_VALIDATOR", 'validator.w3.org')
+        validator = httpclient.Connection(url, 80, logger=self)
         self.addCleanup(validator.disconnect)
 
         source = self.browser.page_source
