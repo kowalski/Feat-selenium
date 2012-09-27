@@ -207,6 +207,22 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             self.fail("Failing because of invalid html. "
                       "Saved validator output to %s\n" % (html_name, ))
 
+    def archive_screenshot(self, name):
+        target = os.environ.get('SELENIUM_ARTIFACTS')
+        if target is None:
+            self.info("Not making screenshots because SELENIUM_ARTIFACTS "
+                      "enviroment variable is not set.")
+            return
+        if not os.path.isdir(target):
+            self.fail("SELENIUM_ARTIFACTS environment variable should "
+                      "be set to an existing directory path, not %r" %
+                      (target, ))
+        if '.png' not in name:
+            name += '.png'
+        path = os.path.join(target, name)
+        self.info("Archiving a screenshot to: %r", path)
+        self.browser.get_screenshot_as_file(path)
+
 
 class Config(object):
 
