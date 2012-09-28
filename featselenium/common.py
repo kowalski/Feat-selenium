@@ -74,6 +74,8 @@ class LogWrapper(log.Logger):
 
 class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
+    artifact_counters = dict()
+
     def __init__(self, methodName='runTest'):
         log.FluLogKeeper.__init__(self)
         log.Logger.__init__(self, self)
@@ -207,7 +209,7 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             self.fail("Failing because of invalid html. "
                       "Saved validator output to %s\n" % (html_name, ))
 
-    def archive_screenshot(self, name):
+    def archive_screenshot(self, name, prefix):
         target = os.environ.get('SELENIUM_ARTIFACTS')
         if target is None:
             self.info("Not making screenshots because SELENIUM_ARTIFACTS "
@@ -217,8 +219,10 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             self.fail("SELENIUM_ARTIFACTS environment variable should "
                       "be set to an existing directory path, not %r" %
                       (target, ))
-        if '.png' not in name:
-            name += '.png'
+        counter = type(self).artifact_counters.get(prefix, 0)
+        counter += 1
+        type(self).artifact_counters[prefix] = counter
+        name = "%s_%02d_%s.png" % (prefix, counter, name)
         path = os.path.join(target, name)
         self.info("Archiving a screenshot to: %r", path)
         self.browser.get_screenshot_as_file(path)
