@@ -1,8 +1,10 @@
 import ConfigParser
 import os
 import types
+import sys
 
 from twisted.trial import unittest
+from twisted.python import failure
 
 from poster import encode
 
@@ -82,46 +84,48 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         unittest.TestCase.__init__(self, methodName)
 
     def run(self, result):
-        ini_path = os.environ.get("SELENIUM_INI", '')
-        skip_all = None
-        if ini_path != 'ignore' and not os.path.exists(ini_path):
-            ini_path = os.path.abspath(ini_path)
-            skip = (
-                "Configuration file not found! You should set the "
-                "SELENIUM_INI environment variable. If you really don't "
-                "want to use any config set this varialbe to 'ignore'. "
-                "The setting at the moment is: %r" % (ini_path, ))
-            result.addSkip(self, skip)
-
-        config = Config(ini_path)
-        canonical_name = '.'.join([reflect.canonical_name(self),
-                                   self._testMethodName])
-        os.mkdir(canonical_name)
         backupdir = os.path.abspath(os.path.curdir)
         try:
+            ini_path = os.environ.get("SELENIUM_INI", '')
+            ini_path = os.path.abspath(ini_path)
+            if ini_path != 'ignore':
+                try:
+                    self.config = Config(ini_path)
+                except Exception:
+                    msg = (
+                        "Configuration file not found! You should set the "
+                        "SELENIUM_INI environment variable. If you really don't "
+                        "want to use any config set this varialbe to 'ignore'. "
+                        "The setting at the moment is: %r" % (ini_path, ))
+                    raise self.failureException(msg), None, sys.exc_info()[2]
+            else:
+                self.config = None
+
+            canonical_name = '.'.join([reflect.canonical_name(self),
+                                       self._testMethodName])
+            os.mkdir(canonical_name)
             os.chdir(os.path.join(os.path.curdir, canonical_name))
+
             logfile = os.path.join(os.path.curdir, 'test.log')
             log.FluLogKeeper.init(logfile)
             log.FluLogKeeper.redirect_to(None, logfile)
             log.FluLogKeeper.set_debug('5')
 
-            if skip_all:
-                result.addSkip(self, skip_all)
-            else:
-                self.browser = TestDriver(self, suffix='screenshot')
-                self.config = config
-                unittest.TestCase.run(self, result)
+            self.browser = TestDriver(self, suffix='screenshot')
+            unittest.TestCase.run(self, result)
 
-                b = self.browser
-                for handle in b.window_handles:
-                    b.switch_to_window(handle)
-                    self.info(
-                        "Grabing screenshot before closing the window "
-                        "title: %s", b.title)
-                    b.do_screenshot()
-                b.quit()
-                del(self.browser)
-                del(self.config)
+            b = self.browser
+            for handle in b.window_handles:
+                b.switch_to_window(handle)
+                self.info(
+                    "Grabing screenshot before closing the window "
+                    "title: %s", b.title)
+                b.do_screenshot()
+            b.quit()
+            del(self.browser)
+            del(self.config)
+        except Exception:
+            result.addError(self, failure.Failure())
         finally:
             os.chdir(backupdir)
 
