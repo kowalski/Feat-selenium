@@ -1,3 +1,4 @@
+import base64
 import ConfigParser
 import os
 import types
@@ -10,12 +11,28 @@ from poster import encode
 
 from selenium import webdriver
 from selenium.webdriver.remote import webelement
+from selenium.webdriver.remote.command import Command
+from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.common import alert
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.common import exceptions
 
 from feat.common import decorator, log, error, reflect, defer, time
 from feat.web import http, httpclient
+
+
+def explicitly_wait(method, args, kwargs, poll=0.5, timeout=10):
+    end_time = time.time() + timeout
+    while(True):
+        try:
+            return method(*args, **kwargs)
+        except (exceptions.NoSuchElementException,
+                exceptions.StaleElementReferenceException,
+                exceptions.InvalidSelectiorException):
+            if(time.time() > end_time):
+                raise
+        time.sleep(poll)
 
 
 class LogWrapper(log.Logger):
@@ -29,6 +46,10 @@ class LogWrapper(log.Logger):
     def __init__(self, logkeeper, delegate):
         log.Logger.__init__(self, logkeeper)
         self._delegate = delegate
+        self.set_explicit_wait(None)
+
+    def set_explicit_wait(self, timeout):
+        self._explicit_wait = timeout
 
     @property
     def name(self):
@@ -50,7 +71,11 @@ class LogWrapper(log.Logger):
                        (self.name, unwrapped.__name__, args, kwargs),
                        depth=-3)
             try:
-                res = unwrapped(*args, **kwargs)
+                if self._explicit_wait is None:
+                    res = unwrapped(*args, **kwargs)
+                else:
+                    res = explicitly_wait(unwrapped, args, kwargs,
+                                          timeout=self._explicit_wait)
                 if isinstance(res, self.wrap_types):
                     res = LogWrapper(self._logger, res)
                 return res
@@ -242,6 +267,31 @@ class Config(object):
         return self._cfg.get(section, key)
 
 
+class RemoteIE(RemoteWebDriver):
+
+    def __init__(self, host, port):
+        executor = 'http://%s:%d/wd/hub' % (host, port)
+        RemoteWebDriver.__init__(
+            self, command_executor=executor,
+            desired_capabilities=DesiredCapabilities.INTERNETEXPLORER)
+
+    def save_screenshot(self, filename):
+        """
+        Gets the screenshot of the current window. Returns False if there is
+        any IOError, else returns True. Use full paths in your filename.
+        """
+        png = RemoteWebDriver.execute(self, Command.SCREENSHOT)['value']
+        try:
+            f = open(filename, 'wb')
+            f.write(base64.decodestring(png))
+            f.close()
+        except IOError:
+            return False
+        finally:
+            del png
+        return True
+
+
 class TestDriver(LogWrapper):
     '''
     Delegates all the method calls selenium.webdriver.Firefox instance.
@@ -252,19 +302,36 @@ class TestDriver(LogWrapper):
     wrap_types = (webelement.WebElement, alert.Alert)
 
     def __init__(self, logkeeper, suffix):
-        if os.environ.get('SELENIUM_BROWSER', '').upper() == 'FIREFOX':
+        brow = os.environ.get('SELENIUM_BROWSER', '').upper()
+        if brow == 'FIREFOX':
             binary = None
             path = os.environ.get('SELENIUM_FIREFOX', '')
             if path:
                 binary = FirefoxBinary(path)
             self._browser = webdriver.Firefox(firefox_binary=binary)
             self.browser = 'Firefox'
+        elif brow == "MSIE":
+            remote = os.environ.get("SELENIUM_REMOTE_IE")
+            if not remote:
+                raise ValueError("For MSIE type of driver you need to set"
+                                 " the SELENIUM_REMOTE_IE variable with the "
+                                 "address to send commands to.")
+            host, port = remote.split(":")
+            port = int(port)
+            self._browser = RemoteIE(host, port)
+            self.browser = 'MSIE'
         else:
             self._browser = webdriver.Chrome()
             self.browser = 'Chrome'
         LogWrapper.__init__(self, logkeeper, self._browser)
+        if self.msie:
+            self.set_explicit_wait(10)
         self._suffix = suffix
         self._screenshot_counter = 0
+
+    @property
+    def msie(self):
+        return self.browser == "MSIE"
 
     def do_screenshot(self):
         filename = self._screenshot_name()
@@ -274,13 +341,25 @@ class TestDriver(LogWrapper):
     def input_field(browser, xpath, value, noncritical=False):
         elem = browser.find_element_by_xpath(xpath, noncritical=noncritical)
         if elem:
-            elem.clear()
-            elem.send_keys(value)
+            if browser.msie:
+                # in IE calling clear() causes problems:
+                # http://code.google.com/p/selenium/issues/detail?id=3402
+                browser.execute_script('arguments[0].value = "%s"' % (value, ),
+                                       elem._delegate)
+            else:
+                elem.clear()
+                elem.send_keys(value)
 
     def click(browser, xpath, noncritical=False):
         elem = browser.find_element_by_xpath(xpath, noncritical=noncritical)
         if elem:
-            elem.click()
+            if browser.msie:
+                # in IE calling clicking inputs inside the iframe
+                # has no effect
+                # http://code.google.com/p/selenium/issues/detail?id=2387
+                browser.execute_script("arguments[0].click()", elem._delegate)
+            else:
+                elem.click()
 
     def on_error(self, _e):
         self.do_screenshot()
