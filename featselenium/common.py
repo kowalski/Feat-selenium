@@ -22,7 +22,7 @@ from feat.common import decorator, log, error, reflect, defer, time
 from feat.web import http, httpclient
 
 
-def explicitly_wait(method, args, kwargs, poll=0.5, timeout=10):
+def explicitly_wait(method, args=tuple(), kwargs=dict(), poll=0.5, timeout=10):
     end_time = time.time() + timeout
     while(True):
         try:
@@ -339,14 +339,17 @@ class TestDriver(LogWrapper):
         self._browser.get_screenshot_as_file(filename)
 
     def input_field(browser, xpath, value, noncritical=False):
-        elem = browser.find_element_by_xpath(xpath, noncritical=noncritical)
-        if elem:
-            if browser.msie:
-                # in IE calling clear() causes problems:
-                # http://code.google.com/p/selenium/issues/detail?id=3402
-                browser.execute_script('arguments[0].value = "%s"' % (value, ),
-                                       elem._delegate)
-            else:
+        if browser.msie:
+
+            def set_value(browser, xpath, value):
+                elem = browser.find_element_by_xpath(xpath)
+                browser.execute_script(
+                    'arguments[0].value = "%s"' % (value, ), elem)
+
+            explicitly_wait(set_value, args=(browser._delegate, xpath, value))
+        else:
+            elem = browser.find_element_by_xpath(xpath, noncritical=noncritical)
+            if elem:
                 elem.clear()
                 elem.send_keys(value)
 
