@@ -353,8 +353,13 @@ class TestDriver(LogWrapper):
                 elem.clear()
                 elem.send_keys(value)
 
-    def click(browser, xpath, noncritical=False):
-        elem = browser.find_element_by_xpath(xpath, noncritical=noncritical)
+    def click(browser, elem, noncritical=False):
+        if isinstance(elem, (str, unicode)):
+            # xpath was passed
+            elem = browser.find_element_by_xpath(elem, noncritical=noncritical)
+        elif not isinstance(elem, LogWrapper):
+            raise TypeError('argument 2 of click() should be an xpath or '
+                            'element, %r passed' % (elem, ))
         if elem:
             if browser.msie:
                 # in IE calling clicking inputs inside the iframe
