@@ -6,6 +6,7 @@ import sys
 
 from twisted.trial import unittest
 from twisted.python import failure
+from twisted.internet import threads
 
 from poster import encode
 
@@ -43,10 +44,11 @@ class LogWrapper(log.Logger):
 
     wrap_types = tuple()
 
-    def __init__(self, logkeeper, delegate):
+    def __init__(self, logkeeper, delegate, work_in_thread=False):
         log.Logger.__init__(self, logkeeper)
         self._delegate = delegate
         self.set_explicit_wait(None)
+        self._work_in_thread = work_in_thread
 
     def set_explicit_wait(self, timeout):
         self._explicit_wait = timeout
@@ -72,13 +74,11 @@ class LogWrapper(log.Logger):
                        depth=-3)
             try:
                 if self._explicit_wait is None:
-                    res = unwrapped(*args, **kwargs)
+                    return self._wrap_call(unwrapped, *args, **kwargs)
                 else:
-                    res = explicitly_wait(unwrapped, args, kwargs,
-                                          timeout=self._explicit_wait)
-                if isinstance(res, self.wrap_types):
-                    res = LogWrapper(self._logger, res)
-                return res
+                    return self._wrap_call(explicitly_wait,
+                                           unwrapped, args, kwargs,
+                                           timeout=self._explicit_wait)
             except Exception as e:
                 error.handle_exception(
                     self, e,
@@ -94,6 +94,21 @@ class LogWrapper(log.Logger):
         decorator._function_mimicry(unwrapped, wrapped)
         return wrapped
 
+    def _wrap_call(self, __method, *args, **kwargs):
+        if not self._work_in_thread:
+            res = __method(*args, **kwargs)
+            return self._wrap_call_result(res)
+        else:
+            d = threads.deferToThread(__method, *args, **kwargs)
+            d.addCallback(self._wrap_call_result)
+            return d
+
+    def _wrap_call_result(self, res):
+        if isinstance(res, self.wrap_types):
+            res = LogWrapper(self._logger, res,
+                             work_in_thread=self._work_in_thread)
+        return res
+
     def on_error(self, e):
         '''override in subclasses'''
         pass
@@ -102,6 +117,7 @@ class LogWrapper(log.Logger):
 class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
     artifact_counters = dict()
+    threaded_selenium = False
 
     def __init__(self, methodName='runTest'):
         log.FluLogKeeper.__init__(self)
@@ -136,10 +152,14 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             log.FluLogKeeper.redirect_to(None, logfile)
             log.FluLogKeeper.set_debug('5')
 
-            self.browser = TestDriver(self, suffix='screenshot')
+            self.browser = TestDriver(self, suffix='screenshot',
+                                      work_in_thread=self.threaded_selenium)
             unittest.TestCase.run(self, result)
 
             b = self.browser
+            # when the test is finished reactor might not be running,
+            # we need to force switching browser to synchronous mode
+            b._work_in_thread = False
             for handle in b.window_handles:
                 b.switch_to_window(handle)
                 self.info(
@@ -300,7 +320,7 @@ class TestDriver(LogWrapper):
     log_category = 'browser'
     wrap_types = (webelement.WebElement, alert.Alert)
 
-    def __init__(self, logkeeper, suffix):
+    def __init__(self, logkeeper, suffix, work_in_thread=False):
         brow = os.environ.get('SELENIUM_BROWSER', '').upper()
         if brow == 'FIREFOX':
             binary = None
@@ -322,7 +342,8 @@ class TestDriver(LogWrapper):
         else:
             self._browser = webdriver.Chrome()
             self.browser = 'Chrome'
-        LogWrapper.__init__(self, logkeeper, self._browser)
+        LogWrapper.__init__(self, logkeeper, self._browser,
+                            work_in_thread=work_in_thread)
         if self.msie:
             self.set_explicit_wait(10)
         self._suffix = suffix
@@ -347,7 +368,8 @@ class TestDriver(LogWrapper):
 
             explicitly_wait(set_value, args=(browser._delegate, xpath, value))
         else:
-            elem = browser.find_element_by_xpath(xpath, noncritical=noncritical)
+            elem = browser.find_element_by_xpath(xpath,
+                                                 noncritical=noncritical)
             if elem:
                 elem.clear()
                 elem.send_keys(value)
