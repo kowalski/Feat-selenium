@@ -191,8 +191,10 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
     def wait_for_ajax(self, timeout=30):
 
+        @defer.inlineCallbacks
         def check():
-            return self.browser.get_active_ajax() == 0
+            active = yield self.browser.get_active_ajax()
+            defer.returnValue(active == 0)
 
         return self.wait_for(check, timeout)
 
@@ -273,7 +275,7 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         name = "%s_%02d_%s.png" % (prefix, counter, name)
         path = os.path.join(target, name)
         self.info("Archiving a screenshot to: %r", path)
-        self.browser.get_screenshot_as_file(path)
+        return self.browser.get_screenshot_as_file(path)
 
 
 class Config(object):
@@ -356,7 +358,7 @@ class TestDriver(LogWrapper):
     def do_screenshot(self):
         filename = self._screenshot_name()
         self.info("Saving screenshot to: %s", filename)
-        self._browser.get_screenshot_as_file(filename)
+        return self._browser.get_screenshot_as_file(filename)
 
     def input_field(browser, xpath, value, noncritical=False):
         if browser.msie:
@@ -370,9 +372,13 @@ class TestDriver(LogWrapper):
         else:
             elem = browser.find_element_by_xpath(xpath,
                                                  noncritical=noncritical)
-            if elem:
+            if not isinstance(elem, defer.Deferred):
                 elem.clear()
                 elem.send_keys(value)
+            else:
+                elem.addCallback(defer.keep_param, defer.call_param, 'clear')
+                elem.addCallback(defer.call_param, 'send_keys', value)
+                return elem
 
     def click(browser, elem, noncritical=False):
         if isinstance(elem, (str, unicode)):
@@ -381,14 +387,17 @@ class TestDriver(LogWrapper):
         elif not isinstance(elem, LogWrapper):
             raise TypeError('argument 2 of click() should be an xpath or '
                             'element, %r passed' % (elem, ))
-        if elem:
+        if isinstance(elem, defer.Deferred):
+            elem.addCallback(defer.call_param, 'click')
+            return elem
+        elif elem:
             if browser.msie:
                 # in IE calling clicking inputs inside the iframe
                 # has no effect
                 # http://code.google.com/p/selenium/issues/detail?id=2387
                 browser.execute_script("arguments[0].click()", elem._delegate)
             else:
-                elem.click()
+                return elem.click()
 
     def on_error(self, _e):
         self.do_screenshot()
@@ -403,7 +412,12 @@ class TestDriver(LogWrapper):
         return res
 
     def get_active_ajax(browser):
-        return int(browser.execute_script("return $.active"))
+        r = browser.execute_script("return $.active")
+        if isinstance(r, defer.Deferred):
+            r.addCallback(int)
+            return r
+        else:
+            return int(r)
 
     ### private ###
 
