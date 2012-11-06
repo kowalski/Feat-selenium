@@ -19,13 +19,7 @@ To run the tests you need to:
 
   1. Choose and configure the browser (see next section).
 
-  2. Say which config you want to use, for example for .local domain use: ::
-
-       export SELENIUM_INI=`pwd`/local.ini
-
-The config is just an .ini file which will be parsed with ConfigParser and available in your tests under self.config refererence.
-
-  3. You are good to go, run tests with: ::
+  2. You are good to go, run tests with: ::
 
        trial moduleinwhichyoukeepselenium
 
@@ -73,6 +67,20 @@ Before you can start the test you need to setup the remote machine as well. Go t
   java -Dwebdriver.ie.driver="PATH_TO/IEDriverServer.exe" -jar selenium-server-standalone-VERSION.jar
 
 Hint: if you are using virtual box to run windows you should configure the network adapter to "Bridge network adapters" option, so that the virtual machine is on the same network as the host.
+
+
+Test config
+-----------
+
+There are different ways one would use selenium tests. If you want to want to use it to run tests against the deployed platform instead of runnign the test server from the setup, you would probably need a configuration file which will hold all the urls, passwords, etc.
+
+You set the config to be used like this: ::
+
+  export SELENIUM_INI=`pwd`/local.ini
+
+The file will be parsed with ConfigParser library. You can access values from the config from inside the test like this: ::
+
+  value = self.config.get(section, key)
 
 
 Debugging

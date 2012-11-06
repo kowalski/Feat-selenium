@@ -108,24 +108,24 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         log.Logger.__init__(self, self)
         unittest.TestCase.__init__(self, methodName)
 
+    @property
+    def config(self):
+        if not hasattr(self, '_selenium_config'):
+            ini_path = os.environ.get("SELENIUM_INI", '')
+            ini_path = os.path.abspath(ini_path)
+            try:
+                self._selenium_config = Config(ini_path)
+            except Exception:
+                msg = (
+                    "Configuration file not found! You should set the "
+                    "SELENIUM_INI environment variable to point to existing "
+                    "file. The setting at the moment is: %r" % (ini_path, ))
+                raise self.failureException(msg), None, sys.exc_info()[2]
+        return self._selenium_config
+
     def run(self, result):
         backupdir = os.path.abspath(os.path.curdir)
         try:
-            ini_path = os.environ.get("SELENIUM_INI", '')
-            ini_path = os.path.abspath(ini_path)
-            if ini_path != 'ignore':
-                try:
-                    self.config = Config(ini_path)
-                except Exception:
-                    msg = (
-                        "Configuration file not found! You should set the "
-                        "SELENIUM_INI environment variable. If you really don't "
-                        "want to use any config set this varialbe to 'ignore'. "
-                        "The setting at the moment is: %r" % (ini_path, ))
-                    raise self.failureException(msg), None, sys.exc_info()[2]
-            else:
-                self.config = None
-
             canonical_name = '.'.join([reflect.canonical_name(self),
                                        self._testMethodName])
             os.mkdir(canonical_name)
@@ -148,7 +148,6 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
                 b.do_screenshot()
             b.quit()
             del(self.browser)
-            del(self.config)
         except Exception:
             result.addError(self, failure.Failure())
         finally:
