@@ -148,12 +148,18 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
                     "Grabbing screenshot before closing the window "
                     "title: %s", b.title)
                 b.do_screenshot()
-            b.quit()
-            del(self.browser)
         except Exception:
             result.addError(self, failure.Failure())
         finally:
             os.chdir(backupdir)
+            b = self.browser
+            try:
+                b.quit()
+            except Exception, e:
+                self.info('Could not quit, got exception %r', e)
+                f = failure.Failure()
+                result.addError(self, f)
+            del self.browser
 
     @defer.inlineCallbacks
     def wait_for(self, check, timeout, freq=0.5, kwargs=dict()):
