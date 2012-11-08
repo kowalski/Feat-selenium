@@ -137,13 +137,15 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             log.FluLogKeeper.set_debug('5')
 
             self.browser = TestDriver(self, suffix='screenshot')
+            self.info('calling unittest.TestCase.run')
             unittest.TestCase.run(self, result)
+            self.info('called unittest.TestCase.run')
 
             b = self.browser
             for handle in b.window_handles:
                 b.switch_to_window(handle)
                 self.info(
-                    "Grabing screenshot before closing the window "
+                    "Grabbing screenshot before closing the window "
                     "title: %s", b.title)
                 b.do_screenshot()
             b.quit()
@@ -323,6 +325,7 @@ class TestDriver(LogWrapper):
             self._browser = webdriver.Chrome()
             self.browser = 'Chrome'
         LogWrapper.__init__(self, logkeeper, self._browser)
+        self.info('Browser type: %r', self.browser)
         if self.msie:
             self.set_explicit_wait(10)
         self._suffix = suffix
