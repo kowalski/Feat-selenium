@@ -155,8 +155,6 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         finally:
             os.chdir(backupdir)
 
-        return result
-
     @defer.inlineCallbacks
     def wait_for(self, check, timeout, freq=0.5, kwargs=dict()):
         try:
