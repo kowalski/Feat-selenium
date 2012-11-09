@@ -342,7 +342,10 @@ class TestDriver(LogWrapper):
     def do_screenshot(self):
         filename = self._screenshot_name()
         self.info("Saving screenshot to: %s", filename)
-        self._browser.get_screenshot_as_file(filename)
+        try:
+            self._browser.get_screenshot_as_file(filename)
+        except Exception, e:
+            self.info("Could not save screenshot: %r", e)
 
     def input_field(browser, xpath, value, noncritical=False):
         if browser.msie:
