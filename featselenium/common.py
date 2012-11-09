@@ -142,7 +142,7 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             self.info('called unittest.TestCase.run')
 
             b = self.browser
-            for handle in b.window_handles:
+            for handle in b.window_handles or []:
                 b.switch_to_window(handle)
                 self.info(
                     "Grabbing screenshot before closing the window "
