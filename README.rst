@@ -118,6 +118,7 @@ To enable this tools set the following variable: ::
 
   export SELENIUM_ARTIFACTS="/path/to/target"
 
-Please note that this variable has to point to an exisiting directory.
+Please note that this variable has to point to an exisiting directory, and
+be an absolute path.
 
 
