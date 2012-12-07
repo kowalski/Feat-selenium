@@ -342,7 +342,10 @@ class TestDriver(LogWrapper):
             self._browser = RemoteIE(host, port)
             self.browser = 'MSIE'
         else:
-            self._browser = webdriver.Chrome()
+            from selenium.webdriver.chrome import options
+            chrome_options = options.Options()
+            chrome_options.add_argument("--disable-extensions")
+            self._browser = webdriver.Chrome(chrome_options=chrome_options)
             self.browser = 'Chrome'
         LogWrapper.__init__(self, logkeeper, self._browser,
                             work_in_thread=work_in_thread)
