@@ -178,7 +178,8 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
     @defer.inlineCallbacks
     def wait_for(self, check, timeout, freq=0.5, kwargs=dict()):
         try:
-            yield time.wait_for(self, check, timeout, freq, kwargs)
+            yield time.wait_for_ex(check, timeout, freq, kwargs=kwargs,
+                                   logger=self)
         except RuntimeError as e:
             raise unittest.FailTest(str(e))
 
