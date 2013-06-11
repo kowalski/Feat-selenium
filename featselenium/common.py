@@ -121,6 +121,7 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
     def __init__(self, methodName='runTest'):
         log.FluLogKeeper.__init__(self)
+        log.set_default(self)
         log.Logger.__init__(self, self)
         unittest.TestCase.__init__(self, methodName)
 
