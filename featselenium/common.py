@@ -164,7 +164,7 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             for handle in b.window_handles:
                 b.switch_to_window(handle)
                 self.info(
-                    "Grabing screenshot before closing the window "
+                    "Grabbing screenshot before closing the window "
                     "title: %s", b.title)
                 b.do_screenshot()
             b.quit()
