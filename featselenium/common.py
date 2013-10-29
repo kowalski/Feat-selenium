@@ -145,8 +145,9 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         try:
             canonical_name = '.'.join([reflect.canonical_name(self),
                                        self._testMethodName])
-            os.mkdir(canonical_name)
-            os.chdir(os.path.join(os.path.curdir, canonical_name))
+            testcase_dir = os.path.join(os.path.curdir, canonical_name)
+            os.mkdir(testcase_dir)
+            os.chdir(testcase_dir)
 
             logfile = os.path.join(os.path.curdir, 'test.log')
             log.FluLogKeeper.init(logfile)
