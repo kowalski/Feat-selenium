@@ -348,7 +348,10 @@ class TestDriver(LogWrapper):
             from selenium.webdriver.chrome import options
             chrome_options = options.Options()
             chrome_options.add_argument("--disable-extensions")
-            self._browser = webdriver.Chrome(chrome_options=chrome_options)
+            chrome_options.add_argument("--disable-application-cache")
+            service_args = ["--log-path=chromedriver.log", ]
+            self._browser = webdriver.Chrome(chrome_options=chrome_options,
+                service_args=service_args)
             self.browser = 'Chrome'
         LogWrapper.__init__(self, logkeeper, self._browser,
                             work_in_thread=work_in_thread)
