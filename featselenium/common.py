@@ -352,6 +352,7 @@ class TestDriver(LogWrapper):
             self.browser = 'Chrome'
         LogWrapper.__init__(self, logkeeper, self._browser,
                             work_in_thread=work_in_thread)
+        self.debug('Browser %s', self.browser)
         if self.msie:
             self.set_explicit_wait(10)
         self._suffix = suffix
