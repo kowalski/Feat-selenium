@@ -349,6 +349,10 @@ class TestDriver(LogWrapper):
             chrome_options = options.Options()
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-application-cache")
+            chrome_options.add_argument("--incognito")
+            chrome_options.add_argument("--disk-cache-size=1")
+            chrome_options.add_argument("--media-cache-size=1")
+            chrome_options.add_argument("--disk-cache-dir=/tmp/doesnotexist")
             service_args = ["--verbose", "--log-path=chromedriver.log", ]
             self._browser = webdriver.Chrome(chrome_options=chrome_options,
                 service_args=service_args)
