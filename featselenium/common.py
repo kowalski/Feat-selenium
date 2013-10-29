@@ -349,7 +349,7 @@ class TestDriver(LogWrapper):
             chrome_options = options.Options()
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-application-cache")
-            service_args = ["--log-path=chromedriver.log", ]
+            service_args = ["--verbose", "--log-path=chromedriver.log", ]
             self._browser = webdriver.Chrome(chrome_options=chrome_options,
                 service_args=service_args)
             self.browser = 'Chrome'
