@@ -171,6 +171,9 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
             b.quit()
             del(self.browser)
         except Exception:
+            # if b.do_screenshot() raised a WebDriverException, we never quit
+            # the browser, so do it here
+            b.quit()
             result.addError(self, failure.Failure())
         finally:
             os.chdir(backupdir)
