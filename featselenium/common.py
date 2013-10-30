@@ -266,7 +266,7 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         target = os.environ.get('SELENIUM_ARTIFACTS')
         if target is None:
             self.info("Not making screenshots because SELENIUM_ARTIFACTS "
-                      "enviroment variable is not set.")
+                      "environment variable is not set.")
             return
         if not os.path.isdir(target):
             self.fail("SELENIUM_ARTIFACTS environment variable should "
