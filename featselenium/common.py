@@ -114,7 +114,7 @@ class LogWrapper(log.Logger):
         pass
 
 
-class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
+class SeleniumTest(log.FluLogKeeper, log.Logger, unittest.TestCase):
 
     """
     @type  browser: L{TestDriver}
@@ -124,16 +124,11 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
     browser = None
 
     def __init__(self, methodName='runTest'):
-        log.FluLogKeeper.__init__(self)
-        log.set_default(self)
-        log.Logger.__init__(self, self)
+        log.FluLogKeeper.init('test.log')
+        log.set_default(log.FluLogKeeper())
+
+        log.Logger.__init__(self, log.get_default())
         unittest.TestCase.__init__(self, methodName)
-# FIXME: this line fails with
-# TypeError: debug() takes exactly 1 argument (2 given)
-#        self.debug('SeleniumTest.__init__: finished')
-# FIXME: this line fails with
-# AttributeError: 'NoneType' object has no attribute 'doLog'
-#        self.info('SeleniumTest.__init__: finished')
 
     @property
     def config(self):
