@@ -130,6 +130,8 @@ class SeleniumTest(log.FluLogKeeper, log.Logger, unittest.TestCase):
         log.Logger.__init__(self, log.get_default())
         unittest.TestCase.__init__(self, methodName)
 
+        self.debug('SeleniumTest.__init__: finished')
+
     @property
     def config(self):
         if not hasattr(self, '_selenium_config'):
