@@ -128,6 +128,12 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         log.set_default(self)
         log.Logger.__init__(self, self)
         unittest.TestCase.__init__(self, methodName)
+# FIXME: this line fails with
+# TypeError: debug() takes exactly 1 argument (2 given)
+#        self.debug('SeleniumTest.__init__: finished')
+# FIXME: this line fails with
+# AttributeError: 'NoneType' object has no attribute 'doLog'
+#        self.info('SeleniumTest.__init__: finished')
 
     @property
     def config(self):
