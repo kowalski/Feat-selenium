@@ -116,8 +116,12 @@ class LogWrapper(log.Logger):
 
 class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
 
+    """
+    @type  browser: L{TestDriver}
+    """
     artifact_counters = dict()
     threaded_selenium = False
+    browser = None
 
     def __init__(self, methodName='runTest'):
         log.FluLogKeeper.__init__(self)
@@ -173,7 +177,8 @@ class SeleniumTest(unittest.TestCase, log.FluLogKeeper, log.Logger):
         except Exception:
             # if b.do_screenshot() raised a WebDriverException, we never quit
             # the browser, so do it here
-            b.quit()
+            if self.browser:
+                self.browser.quit()
             result.addError(self, failure.Failure())
         finally:
             os.chdir(backupdir)
