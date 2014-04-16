@@ -203,6 +203,16 @@ class SeleniumTest(log.FluLogKeeper, log.Logger, unittest.TestCase):
 
         return self.wait_for(check, timeout)
 
+    def wait_for_full_page_load(self, timeout=30):
+
+        @defer.inlineCallbacks
+        def check():
+            status = yield self.browser.execute_script(
+                "return document.readyState")
+            defer.returnValue(status == "complete")
+
+        return self.wait_for(check, timeout)
+
     def wait_for_ajax(self, timeout=30):
 
         @defer.inlineCallbacks
@@ -273,6 +283,7 @@ class SeleniumTest(log.FluLogKeeper, log.Logger, unittest.TestCase):
             self.fail("Failing because of invalid html. "
                       "Saved validator output to %s\n" % (html_name, ))
 
+    @defer.inlineCallbacks
     def archive_screenshot(self, name, prefix):
         target = os.environ.get('SELENIUM_ARTIFACTS')
         if target is None:
@@ -288,8 +299,10 @@ class SeleniumTest(log.FluLogKeeper, log.Logger, unittest.TestCase):
         type(self).artifact_counters[prefix] = counter
         name = "%s_%02d_%s.png" % (prefix, counter, name)
         path = os.path.join(target, name)
+        yield self.wait_for_full_page_load()
         self.info("Archiving a screenshot to: %r", path)
-        return self.browser.get_screenshot_as_file(path)
+        r = yield self.browser.get_screenshot_as_file(path)
+        defer.returnValue(r)
 
 
 class Config(object):
